@@ -1,6 +1,6 @@
 buildscript {
-    extra["kotlin_version"] = "1.3.31"
-    extra["kotlin_coroutines_version"] = "1.2.0"
+    extra["kotlin_version"] = "1.3.41"
+    extra["kotlin_coroutines_version"] = "1.2.2"
     repositories {
         mavenLocal()
         google()
