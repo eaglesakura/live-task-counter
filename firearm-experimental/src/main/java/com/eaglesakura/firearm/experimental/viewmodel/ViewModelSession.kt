@@ -3,6 +3,7 @@ package com.eaglesakura.firearm.experimental.viewmodel
 import android.app.Application
 import android.content.Context
 import android.content.res.Resources
+import android.util.Log
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.Keep
@@ -68,7 +69,7 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
 
     override val coroutineContext: CoroutineContext
         get() = coroutineScope.value?.coroutineContext
-                ?: throw IllegalStateException("Owner not attached, You should call ViewModelSession.refresh(owner)")
+            ?: throw IllegalStateException("Owner not attached, You should call ViewModelSession.refresh(owner)")
 
     /**
      * Owner object data.
@@ -117,16 +118,16 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
         assertUIThread()
 
         refresh(
-                owner = owner,
-                context = when (owner) {
-                    is Fragment -> owner.requireContext()
-                    is Context -> owner
-                    else -> throw IllegalArgumentException("Not supported owner context, $owner")
-                },
-                lifecycleOwner = when (owner) {
-                    is LifecycleOwner -> owner
-                    else -> throw IllegalArgumentException("Not supported owner lifecycle, $owner")
-                }
+            owner = owner,
+            context = when (owner) {
+                is Fragment -> owner.requireContext()
+                is Context -> owner
+                else -> throw IllegalArgumentException("Not supported owner context, $owner")
+            },
+            lifecycleOwner = when (owner) {
+                is LifecycleOwner -> owner
+                else -> throw IllegalArgumentException("Not supported owner lifecycle, $owner")
+            }
         )
     }
 
@@ -143,9 +144,9 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
         }
 
         val token = Token(
-                owner = owner,
-                lifecycleOwner = lifecycleOwner,
-                context = context
+            owner = owner,
+            lifecycleOwner = lifecycleOwner,
+            context = context
         )
         coroutineScopeImpl.value = token
         ownerImpl.value = token.owner
@@ -166,7 +167,7 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
     @UiThread
     fun clear() {
         assertUIThread()
-
+        Log.d("ViewModelSession", "clear session $this, owner=${owner.value}")
         ownerImpl.value?.also {
             ownerImpl.value = null
         }
@@ -181,9 +182,9 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
             coroutineScopeImpl.value = null
         }
 
-        this.value?.also {
-            it.close()
-            this.value = null
+        value?.also { token ->
+            token.close()
+            value = null
         }
     }
 
@@ -192,17 +193,18 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
         @Keep
         @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         fun onDestroy() {
+            Log.d("ViewModelSession", "${this@ViewModelSession} auto clear.")
             clear()
         }
     }
 
     private val resources: Resources
         get() = value?.resources
-                ?: throw IllegalStateException("Owner not attached, You should call ViewModelSession.refresh(owner)")
+            ?: throw IllegalStateException("Owner not attached, You should call ViewModelSession.refresh(owner)")
 
     private val theme: Resources.Theme
         get() = value?.theme
-                ?: throw IllegalStateException("Owner not attached, You should call ViewModelSession.refresh(owner)")
+            ?: throw IllegalStateException("Owner not attached, You should call ViewModelSession.refresh(owner)")
 
     /**
      * Returns string resource from current session's owner.
@@ -341,6 +343,10 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
                 }
                 else -> null
             }
+        }
+
+        override fun toString(): String {
+            return "Token(id=$id, owner=$owner)"
         }
     }
 }
