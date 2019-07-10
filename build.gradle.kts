@@ -8,7 +8,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:3.4.1")
+        classpath("com.android.tools.build:gradle:3.4.2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${extra["kotlin_version"]}")
         classpath("org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.17") // kotlin-docs
         classpath("com.github.ben-manes:gradle-versions-plugin:0.21.0") // version checking plugin
