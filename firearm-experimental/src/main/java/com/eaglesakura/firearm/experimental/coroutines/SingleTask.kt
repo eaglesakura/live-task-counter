@@ -2,6 +2,8 @@ package com.eaglesakura.firearm.experimental.coroutines
 
 import androidx.lifecycle.Lifecycle
 import com.eaglesakura.armyknife.android.extensions.with
+import com.eaglesakura.armyknife.runtime.extensions.cancelByError
+import com.eaglesakura.armyknife.runtime.extensions.receiveOrError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -12,6 +14,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -72,14 +76,16 @@ class SingleTask(
     suspend fun <T> run(block: suspend CoroutineScope.() -> T): T {
         cancelAndJoin()
         val channel = Channel<T>()
-        currentTask = GlobalScope.async(coroutineContext) {
+        currentTask = GlobalScope.launch(coroutineContext) {
             try {
                 channel.send(block())
             } catch (e: CancellationException) {
                 channel.cancel(e)
+            } catch (e: Throwable) {
+                channel.cancelByError(e)
             }
         }
-        return channel.receive()
+        return channel.receiveOrError()
     }
 
     /**
