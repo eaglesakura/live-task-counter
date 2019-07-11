@@ -14,8 +14,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -90,13 +88,15 @@ class SingleTask(
     suspend fun <T> run(block: suspend CoroutineScope.() -> T): T {
         cancelAndJoin()
         val channel = Channel<T>()
-        currentTask = GlobalScope.launch(coroutineContext) {
-            try {
-                channel.send(block())
-            } catch (e: CancellationException) {
-                channel.cancel(e)
-            } catch (e: Throwable) {
-                channel.cancelByError(e)
+        currentTask = GlobalScope.async(coroutineContext) {
+            withContext(dispatcher) {
+                try {
+                    channel.send(block())
+                } catch (e: CancellationException) {
+                    channel.cancel(e)
+                } catch (e: Throwable) {
+                    channel.cancelByError(e)
+                }
             }
         }
         return channel.receiveOrError()
@@ -109,9 +109,7 @@ class SingleTask(
     suspend fun <T> run(lifecycle: Lifecycle, block: suspend CoroutineScope.() -> T): T {
         return run {
             coroutineContext.with(lifecycle)
-            withContext(dispatcher) {
-                block()
-            }
+            block()
         }
     }
 
