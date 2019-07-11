@@ -27,7 +27,21 @@ import kotlin.coroutines.coroutineContext
  * If task is running, then cancel old task, And start new task.
  *
  * val task: SingleTask = ... // SingleTask
- * task.
+ *
+ * suspend fun exampleA() {
+ *      task.run {
+ *          // if running old task.
+ *          // then cancel it.
+ *      }
+ * }
+ *
+ * suspend fun exampleB() {
+ *      task.run {
+ *          // if running old task.
+ *          // then cancel it.
+ *          // execute heavy
+ *      }
+ * }
  */
 class SingleTask(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
