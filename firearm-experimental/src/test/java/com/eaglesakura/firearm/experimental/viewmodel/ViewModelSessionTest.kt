@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.viewModelScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.eaglesakura.armyknife.android.extensions.LiveDataFactory
 import com.eaglesakura.armyknife.android.junit4.extensions.activeAllLiveDataForTest
@@ -103,6 +104,7 @@ class ViewModelSessionTest {
                 .get(ExampleActivityViewModel::class.java)
                 .also { it.session.refresh(activity) }
         }
+        viewModel.viewModelScope
 
         viewModel.activeAllLiveDataForTest()
         assertTrue(viewModel.session.owner.value is Activity)
