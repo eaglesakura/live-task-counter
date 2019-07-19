@@ -62,6 +62,7 @@ class SingleTaskTest {
 
         delay(10)
         assertTrue(task.running.value!!)
+        assertEquals(task.isRunning, task.running.value)
 
         try {
             first.await()
@@ -70,18 +71,23 @@ class SingleTaskTest {
         }
 
         assertTrue(task.running.value!!)
+        assertEquals(task.isRunning, task.running.value)
         assertEquals("second", second.await())
         assertFalse(task.running.value!!)
+        assertEquals(task.isRunning, task.running.value)
     }
 
     @Test
     fun join() = compatibleBlockingTest {
         val task = withContext(Dispatchers.Main) { SingleTask() }
 
+        assertEquals(task.isRunning, task.running.value)
+
         assertTrue(task.run { true })
         task.join()
         assertTrue(task.run { true })
         task.join()
         assertFalse(task.running.value!!)
+        assertEquals(task.isRunning, task.running.value)
     }
 }

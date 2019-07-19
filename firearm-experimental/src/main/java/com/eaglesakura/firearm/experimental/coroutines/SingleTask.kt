@@ -83,6 +83,12 @@ class SingleTask(
         get() = runningImpl
 
     /**
+     * Task is running.
+     */
+    val isRunning: Boolean
+        get() = runTasks.get() > 0
+
+    /**
      * Run single task.
      */
     suspend fun <T> run(block: suspend CoroutineScope.() -> T): T {
