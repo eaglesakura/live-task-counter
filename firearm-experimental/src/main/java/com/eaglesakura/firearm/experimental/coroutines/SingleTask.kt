@@ -3,6 +3,7 @@ package com.eaglesakura.firearm.experimental.coroutines
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.eaglesakura.armyknife.android.extensions.onUiThread
 import com.eaglesakura.armyknife.runtime.extensions.job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -74,7 +75,15 @@ class SingleTask(
      */
     private val runTasks = AtomicInteger()
 
-    private val runningImpl = MutableLiveData<Boolean>().also { it.value = false }
+    private val runningImpl = MutableLiveData<Boolean>().also {
+        if (onUiThread) {
+            it.value = false
+        } else {
+            it.postValue(false)
+            while (it.value == null) {
+            }
+        }
+    }
 
     /**
      * Task running now.

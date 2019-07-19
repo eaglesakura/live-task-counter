@@ -34,8 +34,18 @@ class SingleTaskTest {
     }
 
     @Test
-    fun run() = compatibleBlockingTest {
-        val task = withContext(Dispatchers.Main) { SingleTask() }
+    fun run_foreground() = compatibleBlockingTest(Dispatchers.Main) {
+        val task = SingleTask()
+        assertFalse(task.running.value!!)
+        assertTrue(task.run {
+            true
+        })
+    }
+
+    @Test
+    fun run_background() = compatibleBlockingTest {
+        val task = SingleTask()
+        assertFalse(task.running.value!!)
         assertTrue(task.run {
             true
         })
