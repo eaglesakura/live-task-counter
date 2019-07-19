@@ -2,11 +2,13 @@ package com.eaglesakura.firearm.experimental.coroutines
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.eaglesakura.armyknife.android.junit4.extensions.compatibleBlockingTest
-import com.eaglesakura.armyknife.runtime.coroutines.FlexibleThreadPoolDispatcher
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.yield
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -18,103 +20,68 @@ import org.junit.runner.RunWith
 class SingleTaskTest {
 
     @Test
-    fun run() = compatibleBlockingTest {
+    fun cancel() = compatibleBlockingTest(Dispatchers.Main) {
         val task = SingleTask()
+        launch {
+            task.run {
+                delay(1000)
+            }
+        }
+
+        withTimeout(10) {
+            task.cancelAndJoin()
+        }
+    }
+
+    @Test
+    fun run() = compatibleBlockingTest {
+        val task = withContext(Dispatchers.Main) { SingleTask() }
         assertTrue(task.run {
             true
         })
     }
 
     @Test
-    fun launch_and_launch() = compatibleBlockingTest {
+    fun run_parallel() = compatibleBlockingTest(Dispatchers.Main) {
         val task = SingleTask()
-        val channel = Channel<Int>()
-        task.launch {
-            delay(500)
-            yield()
-            channel.send(1)
-            fail("DON'T CALL HERE")
-        }
-        val job = task.launch {
-            channel.send(2)
+
+        val first = async {
+            task.run {
+                delay(10000)
+                fail()
+                "first"
+            }
         }
 
-        assertEquals(2, channel.receive())
-        job.join()
-        assertFalse(task.isActive)
-    }
+        val second = async {
+            task.run {
+                delay(100)
+                "second"
+            }
+        }
 
-    @Test
-    fun async_and_async() = compatibleBlockingTest {
-        val task = SingleTask()
-        val job0 = task.async {
-            delay(10000)
-            yield()
-            1
-        }
-        val job1 = task.async {
-            2
-        }
+        delay(10)
+        assertTrue(task.running.value!!)
 
         try {
-            val result = job0.await()
-            fail("Not cancel = '$result'")
+            first.await()
+            fail()
         } catch (e: CancellationException) {
-            // ok
         }
 
-        assertEquals(2, job1.await())
-        assertFalse(task.isActive)
+        assertTrue(task.running.value!!)
+        assertEquals("second", second.await())
+        assertFalse(task.running.value!!)
     }
 
     @Test
     fun join() = compatibleBlockingTest {
-        val task = SingleTask()
+        val task = withContext(Dispatchers.Main) { SingleTask() }
 
         assertTrue(task.run { true })
         task.join()
         assertTrue(task.run { true })
         task.join()
-        assertFalse(task.isActive)
-    }
-
-    @Test
-    fun async() = compatibleBlockingTest {
-        val task = SingleTask()
-        assertEquals(2, task.async { 2 }.await())
-        assertFalse(task.isActive)
-    }
-
-    @Test
-    fun launch() = compatibleBlockingTest {
-        val task = SingleTask()
-        val channel = Channel<Int>()
-        val job = task.launch {
-            channel.send(2)
-        }
-
-        assertEquals(2, channel.receive())
-        job.join()
-        assertFalse(task.isActive)
-    }
-
-    @Test
-    fun async_cancel() = compatibleBlockingTest {
-        val task = SingleTask(FlexibleThreadPoolDispatcher.Network)
-        val job = task.async {
-            delay(10000)
-            yield()
-            2
-        }
-
-        try {
-            assertEquals(job, task.currentTask)
-            task.cancel()
-            val result = job.await()
-            fail("Failed task.isCancelled='${task.isCancelled}' job.isCancelled='${job.isCancelled}' job.isCompleted='${job.isCompleted}' result='$result'")
-        } catch (e: CancellationException) {
-            // ok
-        }
-        assertFalse(task.isActive)
+        assertFalse(task.running.value!!)
     }
 }

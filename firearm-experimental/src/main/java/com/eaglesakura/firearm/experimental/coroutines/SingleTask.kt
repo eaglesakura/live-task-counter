@@ -1,24 +1,23 @@
 package com.eaglesakura.firearm.experimental.coroutines
 
-import androidx.lifecycle.Lifecycle
-import com.eaglesakura.armyknife.android.extensions.with
-import com.eaglesakura.armyknife.runtime.extensions.cancelByError
-import com.eaglesakura.armyknife.runtime.extensions.receiveOrError
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import com.eaglesakura.armyknife.runtime.extensions.job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import kotlin.coroutines.coroutineContext
 
 /**
  * Single(Exclusive) task.
@@ -46,21 +45,7 @@ class SingleTask(
 ) {
     private val lock = ReentrantLock()
 
-    internal var currentTask: Job? = null
-
-    /**
-     * Task is active
-     * If task not started, then return `false`,
-     */
-    val isActive: Boolean
-        get() = currentTask?.isActive ?: false
-
-    /**
-     * Task was cancel.
-     * If task not started, then return `false`,
-     */
-    val isCancelled: Boolean
-        get() = currentTask?.isCancelled ?: false
+    internal var scope: CoroutineScope? = null
 
     /**
      * Task cancel.
@@ -68,48 +53,71 @@ class SingleTask(
     @Suppress("MemberVisibilityCanBePrivate")
     fun cancel() {
         lock.withLock {
-            currentTask?.cancel()
+            scope?.cancel(CancellationException("Cancel from SingleTask"))
         }
     }
 
     suspend fun cancelAndJoin() {
-        val task = lock.withLock { currentTask ?: return }
-        task.cancelAndJoin()
+        val task = lock.withLock { scope?.coroutineContext ?: return }
+        task.job.cancelAndJoin()
     }
 
     /**
      * Join a task.
      */
-    suspend fun join() = currentTask?.join()
+    suspend fun join() {
+        lock.withLock { scope?.coroutineContext ?: return }.job.join()
+    }
+
+    /**
+     * current running tasks.
+     */
+    private val runTasks = AtomicInteger()
+
+    private val runningImpl = MutableLiveData<Boolean>().also { it.value = false }
+
+    /**
+     * Task running now.
+     */
+    val running: LiveData<Boolean>
+        get() = runningImpl
 
     /**
      * Run single task.
      */
     suspend fun <T> run(block: suspend CoroutineScope.() -> T): T {
-        cancelAndJoin()
-        val channel = Channel<T>()
-        currentTask = GlobalScope.async(coroutineContext) {
-            withContext(dispatcher) {
-                try {
-                    channel.send(block())
-                } catch (e: CancellationException) {
-                    channel.cancel(e)
-                } catch (e: Throwable) {
-                    channel.cancelByError(e)
+        val nextScope = (GlobalScope + Job())
+        try {
+            withContext(Dispatchers.Main) {
+                runningImpl.value = (runTasks.incrementAndGet() > 0)
+                Log.i("SingleTask", "run tasks='$runTasks'")
+            }
+
+            cancelAndJoin()
+            lock.withLock {
+                scope = nextScope
+            }
+
+            if (nextScope != this.scope) {
+                throw CancellationException("Task conflict.")
+            }
+
+            return withContext(nextScope.coroutineContext) {
+                withContext(dispatcher) {
+                    block()
                 }
             }
-        }
-        return channel.receiveOrError()
-    }
-
-    /**
-     * Run single task with Lifecycle scope.
-     * When lifecycle.onDestroy, then cancel this task.
-     */
-    suspend fun <T> run(lifecycle: Lifecycle, block: suspend CoroutineScope.() -> T): T {
-        return run {
-            coroutineContext.with(lifecycle)
-            block()
+        } finally {
+            lock.withLock {
+                nextScope.cancel()
+                if (nextScope == scope) {
+                    scope = null
+                }
+            }
+            withContext(Dispatchers.Main) {
+                runningImpl.value = (runTasks.decrementAndGet() > 0)
+                Log.i("SingleTask", "finish run tasks='$runTasks'")
+            }
         }
     }
 
@@ -126,45 +134,7 @@ class SingleTask(
         }
     }
 
-    /**
-     * Launch single task with lifecycle.
-     */
-    fun launch(block: suspend CoroutineScope.() -> Unit): Job = this.async(block)
-
-    /**
-     * Launch single task with lifecycle.
-     */
-    fun launch(lifecycle: Lifecycle, block: suspend CoroutineScope.() -> Unit): Job =
-        this.async(lifecycle, block)
-
-    /**
-     * Async single task with lifecycle.
-     */
-    fun <T> async(block: suspend CoroutineScope.() -> T): Deferred<T> {
-        return lock.withLock {
-            val oldTask = currentTask
-            cancel()
-            val result = GlobalScope.async(Dispatchers.Main) {
-                oldTask?.join()
-                withContext(dispatcher) {
-                    block()
-                }
-            }
-            currentTask = result
-            result
-        }
-    }
-
-    /**
-     * Async single task with lifecycle.
-     */
-    fun <T> async(lifecycle: Lifecycle, block: suspend CoroutineScope.() -> T): Deferred<T> =
-        async {
-            coroutineContext.with(lifecycle)
-            block()
-        }
-
     override fun toString(): String {
-        return "SingleTask(dispatcher=$dispatcher, currentTask=$currentTask)"
+        return "SingleTask(dispatcher=$dispatcher, currentTask=$scope)"
     }
 }
