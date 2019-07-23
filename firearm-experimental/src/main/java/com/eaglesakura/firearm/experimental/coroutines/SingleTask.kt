@@ -41,9 +41,15 @@ import kotlin.concurrent.withLock
  *      }
  * }
  */
-class SingleTask(
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+class SingleTask constructor(
+    private val taskName: String,
+    private val dispatcher: CoroutineDispatcher
 ) {
+    constructor(dispatcher: CoroutineDispatcher = Dispatchers.IO) : this(
+        taskName = "SingleTask",
+        dispatcher = dispatcher
+    )
+
     private val lock = ReentrantLock()
 
     internal var scope: CoroutineScope? = null
@@ -105,7 +111,7 @@ class SingleTask(
         try {
             withContext(Dispatchers.Main) {
                 runningImpl.value = (runTasks.incrementAndGet() > 0)
-                Log.i("SingleTask", "run tasks='$runTasks'")
+                Log.i("SingleTask", "start name='$taskName' await='$runTasks'")
             }
 
             cancelAndJoin()
@@ -131,7 +137,7 @@ class SingleTask(
             }
             withContext(Dispatchers.Main) {
                 runningImpl.value = (runTasks.decrementAndGet() > 0)
-                Log.i("SingleTask", "finish run tasks='$runTasks'")
+                Log.i("SingleTask", "finish name='$taskName' await='$runTasks'")
             }
         }
     }
