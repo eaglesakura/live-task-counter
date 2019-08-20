@@ -12,9 +12,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
@@ -59,21 +59,31 @@ class SingleTask constructor(
      */
     @Suppress("MemberVisibilityCanBePrivate")
     fun cancel() {
-        lock.withLock {
-            scope?.cancel(CancellationException("Cancel from SingleTask"))
-        }
+        val scope = lock.withLock { this@SingleTask.scope }
+        Log.i("SingleTask", "try cancel() name='$taskName', scope=$scope")
+        scope?.cancel(CancellationException("Cancel from SingleTask"))
     }
 
+    /**
+     * Task cancel and await.
+     */
     suspend fun cancelAndJoin() {
-        val task = lock.withLock { scope?.coroutineContext ?: return }
-        task.job.cancelAndJoin()
+        val scope = lock.withLock { this@SingleTask.scope }
+        Log.i("SingleTask", "try cancelAndJoin() name='$taskName', scope=$scope")
+
+        scope?.cancel(CancellationException("cancelAndJoin() name='$taskName'"))
+        scope?.coroutineContext?.job?.join()
     }
 
     /**
      * Join a task.
      */
     suspend fun join() {
-        lock.withLock { scope?.coroutineContext ?: return }.job.join()
+        val scope = lock.withLock { this@SingleTask.scope }
+        Log.i("SingleTask", "try join() name='$taskName', scope=$scope")
+        scope?.coroutineContext?.also { context ->
+            context.job.join()
+        }
     }
 
     /**
@@ -82,6 +92,7 @@ class SingleTask constructor(
     private val runTasks = AtomicInteger()
 
     private val runningImpl = MutableLiveData<Boolean>().also {
+        // Initial value, on any thread.
         if (onUiThread) {
             it.value = false
         } else {
@@ -103,15 +114,29 @@ class SingleTask constructor(
     val isRunning: Boolean
         get() = runTasks.get() > 0
 
+    private fun makeTaskName(name: String): String {
+        return if (name.isEmpty()) {
+            taskName
+        } else {
+            "$taskName/$name"
+        }
+    }
+
     /**
      * Run single task.
      */
-    suspend fun <T> run(block: suspend CoroutineScope.() -> T): T {
+    suspend fun <T> run(block: suspend CoroutineScope.() -> T): T = run("", block)
+
+    /**
+     * Run single task with name.
+     */
+    suspend fun <T> run(name: String, block: suspend CoroutineScope.() -> T): T {
         val nextScope = (GlobalScope + Job())
+        val executeTaskName = makeTaskName(name)
+        var completed = false
         try {
             withContext(Dispatchers.Main) {
                 runningImpl.value = (runTasks.incrementAndGet() > 0)
-                Log.i("SingleTask", "start name='$taskName' await='$runTasks'")
             }
 
             cancelAndJoin()
@@ -120,12 +145,16 @@ class SingleTask constructor(
             }
 
             if (nextScope != this.scope) {
-                throw CancellationException("Task conflict.")
+                throw CancellationException("Task conflict, name='$executeTaskName', scope=$nextScope")
             }
 
             return withContext(nextScope.coroutineContext) {
                 withContext(dispatcher) {
-                    block()
+                    Log.i("SingleTask", "start task name='$executeTaskName'")
+                    block(this).also {
+                        yield()
+                        completed = true
+                    }
                 }
             }
         } finally {
@@ -137,7 +166,14 @@ class SingleTask constructor(
             }
             withContext(Dispatchers.Main) {
                 runningImpl.value = (runTasks.decrementAndGet() > 0)
-                Log.i("SingleTask", "finish name='$taskName' await='$runTasks'")
+                if (completed) {
+                    Log.i("SingleTask", "completed name='$executeTaskName' tasks='$runTasks', scope=$nextScope")
+                } else {
+                    Log.i(
+                        "SingleTask",
+                        "conflict or canceled, name='$executeTaskName' tasks='$runTasks', scope=$nextScope"
+                    )
+                }
             }
         }
     }
