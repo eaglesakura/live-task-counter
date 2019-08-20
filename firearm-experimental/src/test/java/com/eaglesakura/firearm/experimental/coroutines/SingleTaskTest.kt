@@ -6,11 +6,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -20,17 +22,24 @@ import org.junit.runner.RunWith
 class SingleTaskTest {
 
     @Test
-    fun cancel() = compatibleBlockingTest(Dispatchers.Main) {
+    fun cancel() = compatibleBlockingTest {
         val task = SingleTask()
+        var started = false
         launch {
             task.run {
+                started = true
                 delay(1000)
+                yield()
+                assertFalse(isActive)
+                fail("DON'T RUN THIS, isActive='$isActive'")
             }
         }
 
-        withTimeout(10) {
-            task.cancelAndJoin()
+        while (!started) {
+            yield()
         }
+        task.cancelAndJoin()
+        assertNull(task.scope)
     }
 
     @Test
@@ -56,15 +65,16 @@ class SingleTaskTest {
         val task = SingleTask()
 
         val first = async {
-            task.run {
+            task.run("first") {
                 delay(10000)
-                fail()
+                assertFalse(isActive)
+                fail("DON'T RUN THIS, isActive='$isActive'")
                 "first"
             }
         }
 
         val second = async {
-            task.run {
+            task.run("second") {
                 delay(100)
                 "second"
             }
