@@ -7,12 +7,12 @@ dependencies {
      * Kotlin support
      */
     "api"("com.eaglesakura.armyknife.armyknife-runtime:armyknife-runtime:1.3.3")
-    "api"("com.eaglesakura.armyknife.armyknife-jetpack:armyknife-jetpack:1.3.8")
+    "api"("com.eaglesakura.armyknife.armyknife-jetpack:armyknife-jetpack:1.4.0")
 
     "compileOnly"("io.reactivex.rxjava2:rxkotlin:2.3.0")  // Reactive Extension
     "compileOnly"("io.reactivex.rxjava2:rxandroid:2.1.1")   // Reactive Extension
-    "compileOnly"("androidx.activity:activity:1.0.0-rc01")
-    "compileOnly"("androidx.activity:activity-ktx:1.0.0-rc01")
+    "compileOnly"("androidx.activity:activity:1.1.0-alpha02")
+    "compileOnly"("androidx.activity:activity-ktx:1.1.0-alpha02")
     "compileOnly"("androidx.annotation:annotation:1.1.0")
     "compileOnly"("androidx.appcompat:appcompat:1.1.0-rc01")
     "compileOnly"("androidx.appcompat:appcompat-resources:1.1.0-rc01")
@@ -26,7 +26,7 @@ dependencies {
     "compileOnly"("androidx.fragment:fragment-ktx:1.0.0")
     "compileOnly"("androidx.lifecycle:lifecycle-extensions:2.0.0")
     "compileOnly"("androidx.lifecycle:lifecycle-viewmodel:2.0.0")
-    "compileOnly"("androidx.lifecycle:lifecycle-viewmodel-savedstate:1.0.0-alpha02")
+    "compileOnly"("androidx.lifecycle:lifecycle-viewmodel-savedstate:1.0.0-alpha03")
     "compileOnly"("androidx.lifecycle:lifecycle-viewmodel-ktx:2.0.0")
     "compileOnly"("androidx.lifecycle:lifecycle-runtime:2.0.0")
     "compileOnly"("androidx.lifecycle:lifecycle-common-java8:2.0.0")

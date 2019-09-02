@@ -16,6 +16,7 @@ import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.OnLifecycleEvent
 import com.eaglesakura.armyknife.android.extensions.assertUIThread
 import com.eaglesakura.armyknife.android.extensions.findInterface
@@ -25,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.plus
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
@@ -66,6 +68,8 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
     private val applicationImpl = MutableLiveData<Application>()
 
     private val coroutineScopeImpl = MutableLiveData<CoroutineScope>()
+
+    private val linkedLiveData: MutableSet<LiveData<*>> = mutableSetOf()
 
     override val coroutineContext: CoroutineContext
         get() = coroutineScope.value?.coroutineContext
@@ -159,6 +163,9 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
 
         // refresh completed
         this.value = token
+
+        // active link
+        liveDataToActive()
     }
 
     /**
@@ -168,6 +175,9 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
     fun clear() {
         assertUIThread()
         Log.d("ViewModelSession", "clear session $this, owner=${owner.value}")
+
+        liveDataToInactive()
+
         ownerImpl.value?.also {
             ownerImpl.value = null
         }
@@ -249,6 +259,61 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
             return it.findInterface(clazz)
         }
         throw IllegalStateException("Owner not attached, You should call ViewModelSession.refresh(owner)")
+    }
+
+    /**
+     * Session link to target LiveData.
+     * when this ViewModelSession refresh, then `target` LiveData change to active.
+     *
+     * e.g.)
+     * class ExampleViewModel : ViewModel {
+     *
+     *      val session = ViewModelSession<Fragment>
+     *
+     *      // MediatorLiveData work on active only.
+     *      val message = MediatorLiveData<String>().also { result ->
+     *                  result.addSource(session) {
+     *                      result.value = session.value?.toString()
+     *                  }
+     *                }
+     * }
+     *
+     * init {
+     *      session.linkTo(message)
+     * }
+     *
+     * fun refresh(fragment: Fragment) {
+     *      session.refresh(fragment)
+     *      // this.message changed to Active!
+     *      require(message.isActive)
+     * }
+     */
+    fun linkTo(target: LiveData<*>): ViewModelSession<T> {
+        this.linkedLiveData.add(target)
+        if (isActive) {
+            target.observeForever(activeLiveDataObserver)
+        }
+        return this
+    }
+
+    /**
+     * Delete link
+     */
+    fun unlink(target: LiveData<*>): ViewModelSession<T> {
+        if (this.linkedLiveData.remove(target)) {
+            target.removeObserver(activeLiveDataObserver)
+        }
+        return this
+    }
+
+    private val activeLiveDataObserver: Observer<Any> = Observer {}
+
+    private fun liveDataToActive() {
+        linkedLiveData.forEach { it.observeForever(activeLiveDataObserver) }
+    }
+
+    private fun liveDataToInactive() {
+        linkedLiveData.forEach { it.removeObserver(activeLiveDataObserver) }
     }
 
     /**
