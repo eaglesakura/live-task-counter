@@ -21,5 +21,6 @@ google-services.json
 fastlane/report.xml
 *.hprof
 /artifacts
-/*.log
+*.log
 dependencies.txt
+

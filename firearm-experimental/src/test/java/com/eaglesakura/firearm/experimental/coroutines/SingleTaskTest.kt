@@ -1,5 +1,6 @@
 package com.eaglesakura.firearm.experimental.coroutines
 
+import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.eaglesakura.armyknife.android.junit4.extensions.compatibleBlockingTest
 import kotlinx.coroutines.CancellationException
@@ -61,12 +62,17 @@ class SingleTaskTest {
     }
 
     @Test
-    fun run_parallel() = compatibleBlockingTest(Dispatchers.Main) {
+    fun run_parallel() = compatibleBlockingTest {
         val task = SingleTask()
+
+        var startFirst = false
+        var startSecond = false
 
         val first = async {
             task.run("first") {
+                startFirst = true
                 delay(10000)
+                yield()
                 assertFalse(isActive)
                 fail("DON'T RUN THIS, isActive='$isActive'")
                 "first"
@@ -74,13 +80,24 @@ class SingleTaskTest {
         }
 
         val second = async {
+            while (!startFirst) {
+                yield()
+            }
             task.run("second") {
+                startSecond = true
                 delay(100)
                 "second"
             }
         }
 
-        delay(10)
+        while (!startSecond) {
+            yield()
+            Log.d(
+                "SingleTaskTest",
+                "spin lock... startFirst:$startFirst startSecond:$startSecond"
+            )
+        }
+
         assertTrue(task.running.value!!)
         assertEquals(task.isRunning, task.running.value)
 

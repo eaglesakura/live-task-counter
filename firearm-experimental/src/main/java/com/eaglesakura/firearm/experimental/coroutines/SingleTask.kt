@@ -68,21 +68,26 @@ class SingleTask constructor(
      * Task cancel and await.
      */
     suspend fun cancelAndJoin() {
-        val scope = lock.withLock { this@SingleTask.scope }
-        Log.i("SingleTask", "try cancelAndJoin() name='$taskName', scope=$scope")
+        val scope = lock.withLock { this@SingleTask.scope } ?: return
 
-        scope?.cancel(CancellationException("cancelAndJoin() name='$taskName'"))
-        scope?.coroutineContext?.job?.join()
+        try {
+            Log.i("SingleTask", "try cancelAndJoin() name='$taskName', scope=$scope")
+            scope.cancel(CancellationException("cancelAndJoin() name='$taskName'"))
+            scope.coroutineContext.job.join()
+        } catch (e: Throwable) {
+        }
     }
 
     /**
      * Join a task.
      */
     suspend fun join() {
-        val scope = lock.withLock { this@SingleTask.scope }
-        Log.i("SingleTask", "try join() name='$taskName', scope=$scope")
-        scope?.coroutineContext?.also { context ->
-            context.job.join()
+        val scope = lock.withLock { this@SingleTask.scope } ?: return
+
+        try {
+            Log.i("SingleTask", "try join() name='$taskName', scope=$scope")
+            scope.coroutineContext.job.join()
+        } catch (e: Throwable) {
         }
     }
 
@@ -139,7 +144,14 @@ class SingleTask constructor(
                 runningImpl.value = (runTasks.incrementAndGet() > 0)
             }
 
-            cancelAndJoin()
+            try {
+                Log.d("SingleTask", "Cancel old task from: '$executeTaskName'")
+                cancelAndJoin()
+            } catch (e: CancellationException) {
+            } finally {
+                yield()
+            }
+
             lock.withLock {
                 scope = nextScope
             }
@@ -167,7 +179,10 @@ class SingleTask constructor(
             withContext(Dispatchers.Main) {
                 runningImpl.value = (runTasks.decrementAndGet() > 0)
                 if (completed) {
-                    Log.i("SingleTask", "completed name='$executeTaskName' tasks='$runTasks', scope=$nextScope")
+                    Log.i(
+                        "SingleTask",
+                        "completed name='$executeTaskName' tasks='$runTasks', scope=$nextScope"
+                    )
                 } else {
                     Log.i(
                         "SingleTask",
