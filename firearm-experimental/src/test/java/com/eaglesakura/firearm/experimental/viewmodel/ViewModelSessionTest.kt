@@ -6,7 +6,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
-import androidx.lifecycle.viewModelScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.eaglesakura.armyknife.android.extensions.LiveDataFactory
 import com.eaglesakura.armyknife.android.junit4.extensions.activeAllLiveDataForTest
@@ -104,19 +103,76 @@ class ViewModelSessionTest {
                 .get(ExampleActivityViewModel::class.java)
                 .also { it.session.refresh(activity) }
         }
-        viewModel.viewModelScope
 
         viewModel.activeAllLiveDataForTest()
         assertTrue(viewModel.session.owner.value is Activity)
         assertEquals("OK", viewModel.message.value)
+    }
+
+    @Test
+    fun link() = compatibleBlockingTest(Dispatchers.Main) {
+        val viewModel = makeActivityViewModel { activity ->
+            ViewModelProviders
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
+        }
+
+        val url = LiveDataFactory.transform(viewModel.session) {
+            "OK"
+        }
+        viewModel.session.linkTo(url)
+
+        assertEquals("OK", url.value)
+        assertTrue(url.hasActiveObservers())
+    }
+
+    @Test
+    fun link_init() = compatibleBlockingTest(Dispatchers.Main) {
+        lateinit var owner: AppCompatActivity
+        val viewModel = makeActivityViewModel { activity ->
+            owner = activity
+            ViewModelProviders
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+        }
+
+        val url = LiveDataFactory.transform(viewModel.session) {
+            "OK"
+        }
+        viewModel.session.linkTo(url)
+
+        assertEquals(null, url.value)
+
+        viewModel.session.refresh(owner)
+
+        assertEquals("OK", url.value)
+    }
+
+    @Test
+    fun unlink() = compatibleBlockingTest(Dispatchers.Main) {
+        val viewModel = makeActivityViewModel { activity ->
+            ViewModelProviders
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
+        }
+
+        val url = LiveDataFactory.transform(viewModel.session) {
+            "OK"
+        }
+        viewModel.session.linkTo(url)
+        viewModel.session.unlink(url)
+
+        assertFalse(url.hasActiveObservers())
     }
 }
 
 class ExampleActivityViewModel : ViewModel() {
     val session = ViewModelSession<Activity>()
 
-    val message = LiveDataFactory.transform(session, session.context) { token, context ->
-        return@transform if (token != null && context != null) {
+    val message = LiveDataFactory.transformNullable(session, session.context) { token, context ->
+        return@transformNullable if (token != null && context != null) {
             "OK"
         } else {
             "Error"

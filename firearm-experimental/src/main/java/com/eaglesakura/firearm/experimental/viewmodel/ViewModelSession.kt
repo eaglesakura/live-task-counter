@@ -26,7 +26,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.plus
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
@@ -285,12 +284,15 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
      * fun refresh(fragment: Fragment) {
      *      session.refresh(fragment)
      *      // this.message changed to Active!
-     *      require(message.isActive)
+     *      require(message.value != null)
      * }
      */
+    @UiThread
     fun linkTo(target: LiveData<*>): ViewModelSession<T> {
+        assertUIThread()
+
         this.linkedLiveData.add(target)
-        if (isActive) {
+        if (value != null) {
             target.observeForever(activeLiveDataObserver)
         }
         return this
@@ -299,7 +301,10 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
     /**
      * Delete link
      */
+    @UiThread
     fun unlink(target: LiveData<*>): ViewModelSession<T> {
+        assertUIThread()
+
         if (this.linkedLiveData.remove(target)) {
             target.removeObserver(activeLiveDataObserver)
         }
