@@ -4,6 +4,7 @@ import android.app.Activity
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,6 +18,7 @@ import com.eaglesakura.armyknife.android.junit4.extensions.makeFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -41,6 +43,10 @@ class ViewModelSessionTest {
 
         activity.finish()
         delay(100)
+
+        while (activity.lifecycle.currentState != Lifecycle.State.DESTROYED) {
+            yield()
+        }
 
         Log.d("ViewModelSession", "check target = $session")
         assertNull(session.value)
@@ -99,9 +105,9 @@ class ViewModelSessionTest {
     fun activityInit() = compatibleBlockingTest(Dispatchers.Main) {
         val viewModel = makeActivityViewModel { activity ->
             ViewModelProviders
-                .of(activity)
-                .get(ExampleActivityViewModel::class.java)
-                .also { it.session.refresh(activity) }
+                    .of(activity)
+                    .get(ExampleActivityViewModel::class.java)
+                    .also { it.session.refresh(activity) }
         }
 
         viewModel.activeAllLiveDataForTest()
@@ -113,9 +119,9 @@ class ViewModelSessionTest {
     fun link() = compatibleBlockingTest(Dispatchers.Main) {
         val viewModel = makeActivityViewModel { activity ->
             ViewModelProviders
-                .of(activity)
-                .get(ExampleActivityViewModel::class.java)
-                .also { it.session.refresh(activity) }
+                    .of(activity)
+                    .get(ExampleActivityViewModel::class.java)
+                    .also { it.session.refresh(activity) }
         }
 
         val url = LiveDataFactory.transform(viewModel.session) {
@@ -133,8 +139,8 @@ class ViewModelSessionTest {
         val viewModel = makeActivityViewModel { activity ->
             owner = activity
             ViewModelProviders
-                .of(activity)
-                .get(ExampleActivityViewModel::class.java)
+                    .of(activity)
+                    .get(ExampleActivityViewModel::class.java)
         }
 
         val url = LiveDataFactory.transform(viewModel.session) {
@@ -153,9 +159,9 @@ class ViewModelSessionTest {
     fun unlink() = compatibleBlockingTest(Dispatchers.Main) {
         val viewModel = makeActivityViewModel { activity ->
             ViewModelProviders
-                .of(activity)
-                .get(ExampleActivityViewModel::class.java)
-                .also { it.session.refresh(activity) }
+                    .of(activity)
+                    .get(ExampleActivityViewModel::class.java)
+                    .also { it.session.refresh(activity) }
         }
 
         val url = LiveDataFactory.transform(viewModel.session) {

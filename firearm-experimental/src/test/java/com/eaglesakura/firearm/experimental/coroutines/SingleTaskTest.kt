@@ -40,7 +40,7 @@ class SingleTaskTest {
             yield()
         }
         task.cancelAndJoin()
-        assertNull(task.scope)
+        assertNull(task.job)
     }
 
     @Test
@@ -107,11 +107,15 @@ class SingleTaskTest {
         } catch (e: CancellationException) {
         }
 
-        assertTrue(task.running.value!!)
-        assertEquals(task.isRunning, task.running.value)
-        assertEquals("second", second.await())
-        assertFalse(task.running.value!!)
-        assertEquals(task.isRunning, task.running.value)
+        withContext(Dispatchers.Main) {
+            assertTrue(task.running.value!!)
+            assertEquals(task.isRunning, task.running.value)
+            assertEquals("second", second.await())
+
+            yield()
+            assertFalse(task.running.value!!)
+            assertEquals(task.isRunning, task.running.value)
+        }
     }
 
     @Test
