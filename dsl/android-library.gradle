@@ -4,7 +4,7 @@ apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     // for *.java options
     compileOptions {
@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 29
         multiDexEnabled true
         aaptOptions.cruncherEnabled false
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

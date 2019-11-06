@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.eaglesakura.armyknife.android.extensions.LiveDataFactory
+import com.eaglesakura.armyknife.android.extensions.assertUIThread
 import com.eaglesakura.armyknife.android.extensions.assertWorkerThread
 import com.eaglesakura.armyknife.android.junit4.extensions.activeAllLiveDataForTest
 import com.eaglesakura.armyknife.android.junit4.extensions.compatibleBlockingTest
@@ -16,6 +17,7 @@ import com.eaglesakura.armyknife.android.junit4.extensions.instrumentationBlocki
 import com.eaglesakura.armyknife.android.junit4.extensions.makeActivity
 import com.eaglesakura.armyknife.android.junit4.extensions.makeActivityViewModel
 import com.eaglesakura.armyknife.android.junit4.extensions.makeFragment
+import com.eaglesakura.armyknife.runtime.extensions.withChildContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -177,6 +179,23 @@ class ViewModelSessionTest {
         assertFalse(url.hasActiveObservers())
     }
 
+    @Test
+    fun launch() = compatibleBlockingTest(Dispatchers.Main) {
+        val viewModel = makeActivityViewModel { activity ->
+            ViewModelProviders
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
+        }
+
+        val task = viewModel.session.async {
+            delay(1000)
+            "ok,task"
+        }
+
+        assertEquals("ok,task", task.await())
+    }
+
     @Test(expected = CancellationException::class)
     fun launch_cancel() = compatibleBlockingTest(Dispatchers.Main) {
         val viewModel = makeActivityViewModel { activity ->
@@ -190,6 +209,30 @@ class ViewModelSessionTest {
             assertWorkerThread()
             delay(1000 * 10)
             fail()
+        }
+
+        delay(1000)
+
+        viewModel.session.clear()
+        task.await()
+    }
+
+    @Test(expected = CancellationException::class)
+    fun launch_cancel_child() = compatibleBlockingTest(Dispatchers.Main) {
+        val viewModel = makeActivityViewModel { activity ->
+            ViewModelProviders
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
+        }
+
+        val task = viewModel.session.async {
+            assertWorkerThread()
+            withChildContext(Dispatchers.Main) {
+                assertUIThread()
+                delay(1000 * 10)
+                fail()
+            }
         }
 
         delay(1000)
