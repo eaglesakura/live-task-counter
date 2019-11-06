@@ -23,10 +23,9 @@ import com.eaglesakura.armyknife.android.extensions.findInterface
 import com.eaglesakura.armyknife.runtime.extensions.instanceOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.plus
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
 
@@ -335,10 +334,8 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
         @Suppress("unused")
         val id: Long = System.currentTimeMillis()
 
-        private val coroutineScope = (GlobalScope + Job())
-
-        override val coroutineContext: CoroutineContext
-            get() = coroutineScope.coroutineContext
+        override val coroutineContext: CoroutineContext =
+            (Dispatchers.Default + Job())
 
         override fun getLifecycle(): Lifecycle = lifecycleOwner.lifecycle
 
@@ -364,7 +361,7 @@ class ViewModelSession<T> : LiveData<ViewModelSession.Token<T>>(), CoroutineScop
             get() = context.applicationContext as Application
 
         internal fun close() {
-            coroutineScope.cancel(CancellationException("'$this' is cleared"))
+            coroutineContext.cancel(CancellationException("'$this' is cleared"))
         }
 
         /**

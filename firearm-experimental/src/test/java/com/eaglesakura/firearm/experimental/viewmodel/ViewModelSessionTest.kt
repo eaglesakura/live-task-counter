@@ -9,13 +9,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.eaglesakura.armyknife.android.extensions.LiveDataFactory
+import com.eaglesakura.armyknife.android.extensions.assertWorkerThread
 import com.eaglesakura.armyknife.android.junit4.extensions.activeAllLiveDataForTest
 import com.eaglesakura.armyknife.android.junit4.extensions.compatibleBlockingTest
 import com.eaglesakura.armyknife.android.junit4.extensions.instrumentationBlockingTest
 import com.eaglesakura.armyknife.android.junit4.extensions.makeActivity
 import com.eaglesakura.armyknife.android.junit4.extensions.makeActivityViewModel
 import com.eaglesakura.armyknife.android.junit4.extensions.makeFragment
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.yield
@@ -24,6 +27,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -105,9 +109,9 @@ class ViewModelSessionTest {
     fun activityInit() = compatibleBlockingTest(Dispatchers.Main) {
         val viewModel = makeActivityViewModel { activity ->
             ViewModelProviders
-                    .of(activity)
-                    .get(ExampleActivityViewModel::class.java)
-                    .also { it.session.refresh(activity) }
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
         }
 
         viewModel.activeAllLiveDataForTest()
@@ -119,9 +123,9 @@ class ViewModelSessionTest {
     fun link() = compatibleBlockingTest(Dispatchers.Main) {
         val viewModel = makeActivityViewModel { activity ->
             ViewModelProviders
-                    .of(activity)
-                    .get(ExampleActivityViewModel::class.java)
-                    .also { it.session.refresh(activity) }
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
         }
 
         val url = LiveDataFactory.transform(viewModel.session) {
@@ -139,8 +143,8 @@ class ViewModelSessionTest {
         val viewModel = makeActivityViewModel { activity ->
             owner = activity
             ViewModelProviders
-                    .of(activity)
-                    .get(ExampleActivityViewModel::class.java)
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
         }
 
         val url = LiveDataFactory.transform(viewModel.session) {
@@ -159,9 +163,9 @@ class ViewModelSessionTest {
     fun unlink() = compatibleBlockingTest(Dispatchers.Main) {
         val viewModel = makeActivityViewModel { activity ->
             ViewModelProviders
-                    .of(activity)
-                    .get(ExampleActivityViewModel::class.java)
-                    .also { it.session.refresh(activity) }
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
         }
 
         val url = LiveDataFactory.transform(viewModel.session) {
@@ -171,6 +175,27 @@ class ViewModelSessionTest {
         viewModel.session.unlink(url)
 
         assertFalse(url.hasActiveObservers())
+    }
+
+    @Test(expected = CancellationException::class)
+    fun launch_cancel() = compatibleBlockingTest(Dispatchers.Main) {
+        val viewModel = makeActivityViewModel { activity ->
+            ViewModelProviders
+                .of(activity)
+                .get(ExampleActivityViewModel::class.java)
+                .also { it.session.refresh(activity) }
+        }
+
+        val task = viewModel.session.async {
+            assertWorkerThread()
+            delay(1000 * 10)
+            fail()
+        }
+
+        delay(1000)
+
+        viewModel.session.clear()
+        task.await()
     }
 }
 
