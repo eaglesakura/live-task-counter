@@ -8,10 +8,10 @@ import com.eaglesakura.armyknife.android.extensions.onUiThread
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 
 /**
  * Single(Exclusive) task.
@@ -149,10 +149,11 @@ class SingleTask constructor(
             runTasks.incrementAndGet()
             syncRunning()
 
+            val scope = CoroutineScope(coroutineContext)
             val executeTaskName = makeTaskName(name)
-            val deferred = lock.withLock {
+            val deferred: Deferred<Pair<Any?, Throwable?>> = lock.withLock {
                 val oldTask = this.job
-                CoroutineScopeImpl.async(dispatcher) {
+                scope.async(dispatcher) {
                     try {
                         oldTask?.cancelAndJoin()
                         yield()
@@ -161,14 +162,15 @@ class SingleTask constructor(
                             "SingleTask",
                             "completed name='$executeTaskName' tasks='$runTasks'"
                         )
-                        result
-                    } catch (e: CancellationException) {
-                        Log.i(
-                            "SingleTask",
-                            "conflict or canceled, name='$executeTaskName' tasks='$runTasks'"
-                        )
-                        throw e
-                    } finally {
+                        Pair(result, null)
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) {
+                            Log.i(
+                                "SingleTask",
+                                "conflict or canceled, name='$executeTaskName' tasks='$runTasks'"
+                            )
+                        }
+                        Pair(null, e)
                     }
                 }.also {
                     this.job = it
@@ -176,7 +178,12 @@ class SingleTask constructor(
             }
 
             try {
-                return deferred.await()
+                return deferred.await().let {
+                    if (it.second != null) {
+                        throw it.second!!
+                    }
+                    it.first as T
+                }
             } finally {
                 lock.withLock {
                     if (deferred == job) {
@@ -205,9 +212,5 @@ class SingleTask constructor(
 
     override fun toString(): String {
         return "SingleTask(name=$taskName, dispatcher=$dispatcher, currentTask=$job)"
-    }
-
-    private object CoroutineScopeImpl : CoroutineScope {
-        override val coroutineContext: CoroutineContext = (SupervisorJob() + Dispatchers.Default)
     }
 }

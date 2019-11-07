@@ -59,6 +59,7 @@ class SingleTaskTest {
         assertTrue(task.run {
             true
         })
+        assertFalse(task.isRunning)
     }
 
     @Test
