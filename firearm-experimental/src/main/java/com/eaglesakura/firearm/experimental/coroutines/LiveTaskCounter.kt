@@ -4,33 +4,65 @@ import androidx.lifecycle.LiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Count parallel tasks with LiveData.
+ *
+ * e.g.)
+ *
+ * val counter = LiveTaskCounter()
+ *
+ * init {
+ *      counter.observeForever {
+ *          val snapshot = it ?: return@observeForever
+ *          if(snapshot.empty) {
+ *              // stop tasks
+ *          }
+ *      }
+ * }
+ *
+ * suspend fun foo() {
+ *      counter.withCount {
+ *          // do something
+ *      }
+ * }
+ *
+ * suspend fun bar() {
+ *      counter.withCount {
+ *          // do something
+ *      }
+ * }
+ *
  */
-class LiveTaskCounter : LiveData<Int>() {
+class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>() {
 
-    private val requestPermits = AtomicInteger()
+    private val versionImpl = AtomicLong()
 
-    override fun getValue(): Int {
-        return super.getValue() ?: 0
-    }
+    private val countImpl = AtomicInteger()
 
     /**
-     * has count
+     * Current count.
+     */
+    val count: Int
+        get() = (this.value?.count ?: 0)
+
+    /**
+     * has countImpl
      */
     val isNotEmpty: Boolean
-        get() = this.value > 0
+        get() = this.count > 0
 
     /**
-     * not have count.
+     * not have countImpl.
      */
     val empty: Boolean
-        get() = this.value == 0
+        get() = this.count == 0
 
     /**
-     * Run task and count.
+     * Run task and countImpl.
      *
      * when start this function, then increment this LiveData.
      * when finally this function, then decrement this LiveData.
@@ -38,13 +70,34 @@ class LiveTaskCounter : LiveData<Int>() {
     suspend fun <T> withCount(action: suspend () -> T): T {
         try {
             withContext(Dispatchers.Main + NonCancellable) {
-                this@LiveTaskCounter.value = requestPermits.incrementAndGet()
+                this@LiveTaskCounter.value = Snapshot(
+                        version = versionImpl.incrementAndGet(),
+                        date = Date(),
+                        count = countImpl.incrementAndGet())
             }
             return action()
         } finally {
             withContext(Dispatchers.Main + NonCancellable) {
-                this@LiveTaskCounter.value = requestPermits.decrementAndGet()
+                this@LiveTaskCounter.value = Snapshot(
+                        version = versionImpl.incrementAndGet(),
+                        date = Date(),
+                        count = countImpl.decrementAndGet())
             }
         }
+    }
+
+    /**
+     * Current context.
+     */
+    data class Snapshot(
+        val date: Date,
+        val version: Long,
+        val count: Int
+    ) {
+        val isNotEmpty: Boolean
+            get() = count > 0
+
+        val empty: Boolean
+            get() = count == 0
     }
 }

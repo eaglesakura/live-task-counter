@@ -19,15 +19,15 @@ class LiveTaskCounterTest {
     @Test
     fun withCount() = instrumentationBlockingTest {
         listOf(
-            Dispatchers.Main,
-            Dispatchers.Default,
-            Dispatchers.IO
+                Dispatchers.Main,
+                Dispatchers.Default,
+                Dispatchers.IO
         ).forEach { dispatcher ->
             Log.d("LiveTaskCounterTest", "dispatcher=$dispatcher")
 
             withContext(dispatcher) {
                 val counter = LiveTaskCounter()
-                assertEquals(0, counter.value)
+                assertEquals(0, counter.count)
                 repeat(100) {
                     launch {
                         counter.withCount {
@@ -36,12 +36,12 @@ class LiveTaskCounterTest {
                     }
                 }
                 delay(100)
-                assertEquals(100, counter.value)
+                assertEquals(100, counter.count)
                 assertTrue(counter.isNotEmpty)
                 assertFalse(counter.empty)
 
                 delay(2000)
-                assertEquals(0, counter.value)
+                assertEquals(0, counter.count)
                 assertFalse(counter.isNotEmpty)
                 assertTrue(counter.empty)
             }
