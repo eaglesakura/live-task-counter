@@ -1,6 +1,7 @@
 package com.eaglesakura.firearm.experimental.coroutines
 
 import androidx.lifecycle.LiveData
+import com.eaglesakura.armyknife.android.extensions.runBlockingOnUiThread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -39,6 +40,12 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>() {
 
+    init {
+        runBlockingOnUiThread {
+            value = Snapshot(Date(), 0, 0)
+        }
+    }
+
     private val versionImpl = AtomicLong()
 
     private val countImpl = AtomicInteger()
@@ -71,17 +78,19 @@ class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>() {
         try {
             withContext(Dispatchers.Main + NonCancellable) {
                 this@LiveTaskCounter.value = Snapshot(
-                        version = versionImpl.incrementAndGet(),
-                        date = Date(),
-                        count = countImpl.incrementAndGet())
+                    version = versionImpl.incrementAndGet(),
+                    date = Date(),
+                    count = countImpl.incrementAndGet()
+                )
             }
             return action()
         } finally {
             withContext(Dispatchers.Main + NonCancellable) {
                 this@LiveTaskCounter.value = Snapshot(
-                        version = versionImpl.incrementAndGet(),
-                        date = Date(),
-                        count = countImpl.decrementAndGet())
+                    version = versionImpl.incrementAndGet(),
+                    date = Date(),
+                    count = countImpl.decrementAndGet()
+                )
             }
         }
     }

@@ -6,8 +6,8 @@ dependencies {
     /**
      * Kotlin support
      */
-    "api"("com.eaglesakura.armyknife.armyknife-runtime:armyknife-runtime:1.3.4")
-    "api"("com.eaglesakura.armyknife.armyknife-jetpack:armyknife-jetpack:1.4.1")
+    "api"("com.eaglesakura.armyknife.armyknife-runtime:armyknife-runtime:1.3.5")
+    "api"("com.eaglesakura.armyknife.armyknife-jetpack:armyknife-jetpack:1.4.2")
 
     "compileOnly"("io.reactivex.rxjava2:rxkotlin:2.4.0")  // Reactive Extension
     "compileOnly"("io.reactivex.rxjava2:rxandroid:2.1.1")   // Reactive Extension
