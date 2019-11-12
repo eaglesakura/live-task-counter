@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,6 +62,45 @@ class LiveTaskCounterTest {
                 assertFalse(counter.isNotEmpty)
                 assertTrue(counter.empty)
             }
+        }
+    }
+
+    @Test
+    fun allOf() = instrumentationBlockingTest {
+        val readCounter = LiveTaskCounter()
+        val writeCounter = LiveTaskCounter()
+
+        val allCounter = LiveTaskCounter.allOf(readCounter, writeCounter)
+
+        assertNotNull(allCounter.value)
+
+        val readJob = launch {
+            readCounter.withCount {
+                delay(1000)
+            }
+        }
+        val writeJob = launch {
+            writeCounter.withCount {
+                delay(1000)
+            }
+        }
+
+        delay(100)
+
+        assertEquals(1, readCounter.count)
+        assertEquals(1, writeCounter.count)
+        assertEquals(2, allCounter.value!!.count)
+        assertEquals(
+            2,
+            allCounter.value!!.version
+        )
+
+        readJob.join()
+        writeJob.join()
+        withContext(Dispatchers.Main) {
+            assertEquals(0, readCounter.count)
+            assertEquals(0, writeCounter.count)
+            assertEquals(4, allCounter.value!!.version)
         }
     }
 }

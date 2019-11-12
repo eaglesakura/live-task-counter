@@ -1,6 +1,7 @@
 package com.eaglesakura.firearm.experimental.coroutines
 
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import com.eaglesakura.armyknife.android.extensions.runBlockingOnUiThread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -108,5 +109,34 @@ class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>() {
 
         val empty: Boolean
             get() = count == 0
+    }
+
+    companion object {
+        /**
+         * Check all task counter.
+         */
+        fun allOf(vararg tasks: LiveTaskCounter): LiveData<Snapshot> {
+            require(tasks.isNotEmpty()) {
+                "tasks is empty"
+            }
+            val result = MediatorLiveData<Snapshot>()
+            val sync: (Snapshot) -> Unit = {
+                result.value = Snapshot(
+                    date = Date(),
+                    count = tasks.sumBy { it.value!!.count },
+                    version = tasks.sumBy { it.value!!.version.toInt() }.toLong()
+                )
+            }
+
+            return runBlockingOnUiThread {
+                tasks.forEach {
+                    result.addSource(it, sync)
+                }
+                // activate
+                result.observeForever {}
+
+                result
+            }
+        }
     }
 }
