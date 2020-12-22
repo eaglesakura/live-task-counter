@@ -39,13 +39,7 @@ import java.util.concurrent.atomic.AtomicLong
  * }
  *
  */
-class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>() {
-
-    init {
-        runBlockingOnUiThread {
-            value = Snapshot(Date(), 0, 0)
-        }
-    }
+class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>(Snapshot(Date(), 0, 0)) {
 
     private val versionImpl = AtomicLong()
 
