@@ -1,15 +1,16 @@
 group = artifact_group
 version = artifact_version
 
-apply plugin: 'maven'
-apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
-apply plugin: 'org.jetbrains.dokka-android'
-
-dokka {
-    outputFormat = 'javadoc'
-    noStdlibLink = true
-    noAndroidSdkLink = true
+apply plugin: "org.jetbrains.dokka"
+dokkaHtml {
+    outputDirectory = new File(buildDir, "dokka")
+    dokkaSourceSets {
+        named("main") {
+            noStdlibLink = true
+            noJdkLink = true
+            noAndroidSdkLink = true
+        }
+    }
 }
 
 task sourcesJar(type: Jar) {
@@ -17,58 +18,71 @@ task sourcesJar(type: Jar) {
     archiveClassifier.set('sources')
 }
 
-task javadocJar(type: Jar, dependsOn: dokka) {
+task javadocJar(type: Jar, dependsOn: dokkaHtml) {
     from "$buildDir/dokka"
     archiveClassifier.set('javadoc')
 }
 
-/**
- * for Deploy test.
- * Maven deploy settings.
- * https://developer.android.com/studio/build/maven-publish-plugin
- */
-afterEvaluate {
-    publishing {
-        repositories {
-            maven {
-                url "file://${System.getProperty('user.home')}/.m2/repository"
-            }
-        }
-        publications {
-            release(MavenPublication) {
-                from components.release
-                // Adds javadocs and sources as separate jars.
-                artifact sourcesJar
-                artifact javadocJar
-            }
-        }
+
+android.libraryVariants.all { variant ->
+    if ("release" != variant.name || "" == artifact_version) {
+        return
+    }
+
+    artifacts {
+        archives javadocJar
+        archives sourcesJar
     }
 }
 
-bintray {
-    user = 'eaglesakura'
-    key = System.env.BINTRAY_API_KEY
-    publish = true
-    override = true
-    pkg {
-        repo = "maven"
-        name = artifact_name
-        vcsUrl = bintray_vcs_url
-        issueTrackerUrl = "${bintray_vcs_url}/issues"
-        licenses = ["MIT"]
-        labels = bintray_labels
-        publications = ['release']
-        version {
-            name = project.version
-            released = new Date()
-            gpg {
-                sign = true
-                passphrase = System.env.BINTRAY_GPG_PASS
+if (project.hasProperty("install_snapshot")) {
+    println("deploy to mavenLocal()")
+    println ":${project.name}:publishToMavenLocal -> file:${System.getProperty('user.home')}/.m2/repository : ${version}"
+    apply plugin: 'maven-publish'
+    /**
+     * Maven deploy settings.
+     * https://developer.android.com/studio/build/maven-publish-plugin
+     */
+    afterEvaluate {
+        publishing {
+            publications {
+                release(MavenPublication) {
+                    from components.release
+                    groupId = artifact_group
+                    artifactId = project.name
+                    // Adds javadocs and sources as separate jars.
+                    artifact sourcesJar
+                    artifact javadocJar
+                }
             }
         }
     }
-    configurations = ['archives']
+} else {
+    println("deploy to bintray.")
+    println ":${project.name}:bintrayUpload  -> ${artifact_group} : ${version}"
+    apply plugin: 'com.jfrog.bintray'
+    apply plugin: 'com.github.dcendents.android-maven'  // Generate POM for bintray.
+    bintray {
+        user = 'eaglesakura'
+        key = System.env.BINTRAY_API_KEY
+        publish = true
+        override = true
+        pkg {
+            repo = "maven"
+            name = artifact_name
+            vcsUrl = bintray_vcs_url
+            issueTrackerUrl = "${bintray_vcs_url}/issues"
+            licenses = ["MIT"]
+            labels = bintray_labels
+            version {
+                name = project.version
+                released = new Date()
+                gpg {
+                    sign = true
+                    passphrase = System.env.BINTRAY_GPG_PASS
+                }
+            }
+        }
+        configurations = ['archives']
+    }
 }
-
-println ":${project.name}:bintrayUpload  -> ${artifact_group} : ${version}"
-println ":${project.name}:uploadArchives -> file:${System.getProperty('user.home')}/.m2/repository : ${version}"

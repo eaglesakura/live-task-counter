@@ -45,7 +45,7 @@ interface ViewModelOwner {
         fun from(fragment: Fragment): ViewModelOwner {
             return object : ViewModelOwner {
                 override val context: Context
-                    get() = fragment.context!!
+                    get() = fragment.requireContext()
                 override val lifecycle: Lifecycle
                     get() = fragment.lifecycle
                 override val lifecycleOwner: LifecycleOwner

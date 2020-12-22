@@ -10,30 +10,34 @@ buildscript {
     }
 }
 
-project.extra["artifact_name"] = project.name
-project.extra["artifact_group"] =
-    "${rootProject.extra["base_group"]}.${project.extra["artifact_name"]}"
-project.extra["bintray_user"] = "eaglesakura"
-project.extra["bintray_labels"] = arrayOf("android", "kotlin")
-project.extra["bintray_vcs_url"] = "https://github.com/eaglesakura/${project.name}"
-
-val buildOnCi = System.getenv("CIRCLE_BUILD_NUM") != null
-val buildTag = System.getenv("CIRCLE_TAG") ?: ""
-val buildNumberFile = rootProject.file(".configs/secrets/build-number.env")
-val buildNumber = when {
-    hasProperty("install_snapshot") -> 99999
-    buildNumberFile.isFile -> buildNumberFile.readText(Charset.forName("UTF-8")).trim().toInt()
-    else -> System.getenv("CIRCLE_BUILD_NUM")?.toInt() ?: 1
-}
+extra["artifact_name"] = project.name
+extra["artifact_group"] = "com.eaglesakura.firearm.${extra["artifact_name"]}"
+extra["bintray_user"] = "eaglesakura"
+extra["bintray_labels"] = arrayOf("android", "kotlin")
+extra["bintray_vcs_url"] = "https://github.com/eaglesakura/${project.name}"
 
 /**
  * Auto configure.
  */
-project.extra["artifact_version"] = when {
-    !buildOnCi -> "${rootProject.extra["base_version"] as String}.snapshot"
-    buildTag.startsWith("v") -> buildTag.substring(1)
-    else -> "${rootProject.extra["base_version"] as String}.build-${buildNumber}"
+extra["artifact_version"] = System.getenv("CIRCLE_TAG").let { CIRCLE_TAG ->
+    val majorMinor = if (CIRCLE_TAG.isNullOrEmpty()) {
+        rootProject.extra["base_version"] as String
+    } else {
+        return@let CIRCLE_TAG.substring(CIRCLE_TAG.indexOf('v') + 1)
+    }
+
+    val buildNumberFile = rootProject.file(".configs/secrets/build-number.env")
+    if (buildNumberFile.isFile) {
+        return@let "$majorMinor.build-${buildNumberFile.readText(Charset.forName("UTF-8"))}"
+    }
+
+    return@let when {
+        hasProperty("install_snapshot") -> "$majorMinor.99999"
+        System.getenv("CIRCLE_BUILD_NUM") != null -> "$majorMinor.build-${System.getenv("CIRCLE_BUILD_NUM")}"
+        else -> "$majorMinor.snapshot"
+    }
 }.trim()
+
 
 val gradleHashFileText = listOf(
     rootProject.projectDir
