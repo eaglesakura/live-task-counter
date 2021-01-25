@@ -1,8 +1,0 @@
-20a0c52dc6c3a74eb6f3606daea64ebe : /build.gradle
-cc2deb06f56c3c628e3a00b29bb35120 : /configure.gradle.kts
-0a8f839c83ed5c3b64e67eebe7bf3cfe : /dsl/android-library.gradle
-004b73c203e4ae92b26ea7bbdfdee8eb : /dsl/bintray.gradle
-5fc316e41fb25b429ef819ddef65c34b : /dsl/ktlint.gradle
-a9a4835a589ed396be2797ba8ed695c3 : /dsl/line-separator.gradle.kts
-efac4b57a9a1ac8aa7f5ac31a1dd88fd : /firearm-experimental/build.gradle
-5131521888d1ed01a2333d6e4dfb76e4 : /settings.gradle

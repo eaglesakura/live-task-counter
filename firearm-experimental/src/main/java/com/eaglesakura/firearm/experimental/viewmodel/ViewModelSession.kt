@@ -21,13 +21,13 @@ import androidx.lifecycle.OnLifecycleEvent
 import com.eaglesakura.armyknife.android.extensions.assertUIThread
 import com.eaglesakura.armyknife.android.extensions.findInterface
 import com.eaglesakura.armyknife.runtime.extensions.instanceOf
+import kotlin.coroutines.CoroutineContext
+import kotlin.reflect.KClass
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlin.coroutines.CoroutineContext
-import kotlin.reflect.KClass
 
 /**
  * ViewModel owner controller.

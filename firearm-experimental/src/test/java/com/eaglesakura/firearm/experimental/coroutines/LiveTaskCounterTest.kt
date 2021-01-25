@@ -44,11 +44,13 @@ class LiveTaskCounterTest {
 
                 val tasks = mutableListOf<Job>().also { list ->
                     repeat(100) {
-                        list.add(launch {
-                            counter.withCount {
-                                delay(1000)
+                        list.add(
+                            launch {
+                                counter.withCount {
+                                    delay(1000)
+                                }
                             }
-                        })
+                        )
                     }
                 }
 

@@ -3,12 +3,12 @@ package com.eaglesakura.firearm.experimental.coroutines
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import com.eaglesakura.armyknife.android.extensions.runBlockingOnUiThread
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /**
  * Count parallel tasks with LiveData.

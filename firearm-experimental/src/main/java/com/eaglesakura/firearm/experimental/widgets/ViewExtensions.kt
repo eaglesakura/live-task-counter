@@ -2,13 +2,13 @@ package com.eaglesakura.firearm.experimental.widgets
 
 import android.view.View
 import com.eaglesakura.firearm.R
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlin.coroutines.CoroutineContext
 
 /**
  * launch async task for view build.
