@@ -1,4 +1,3 @@
-
 fun convert(file: File) {
     val extensions = setOf(
         "kt",
@@ -26,7 +25,6 @@ fun convert(file: File) {
         else -> return
     }
 
-
     val text = file.readText()
     val replaced = if (!text.contains("\r\n")) {
         return
@@ -42,14 +40,12 @@ fun convert(file: File) {
 task("formatLineSeparator") {
     group = "formatting"
     description = "Fix LineSeparator"
+    dependsOn("formatKotlin")
 
     doLast {
         println("Fix line separator in ${project.name}")
         listOfNotNull(
-            file(".").listFiles()?.toList(),
-            fileTree(".circleci").files.toList(),
-            fileTree("dsl").files.toList(),
-            fileTree("codeStyles").files.toList(),
+            file(".").listFiles()!!.toList(),
             fileTree("src").files.toList()
         ).flatten()
             .map { it.canonicalFile }

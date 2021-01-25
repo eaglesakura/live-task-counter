@@ -1,12 +1,11 @@
-apply from: "../dsl/android-library.gradle"
-apply from: "../dsl/ktlint.gradle"
-apply from: "../dsl/bintray.gradle"
+apply from: rootProject.file('scripts/build-android-library.gradle')
+apply from: rootProject.file('scripts/deploy-bintray-aar.gradle')
 
 dependencies {
     /**
      * Kotlin support
      */
-    api("com.eaglesakura.armyknife.armyknife-runtime:armyknife-runtime:1.3.7")
+    api("com.eaglesakura.armyknife.armyknife-runtime:armyknife-runtime:1.3.8")
     api("com.eaglesakura.armyknife.armyknife-jetpack:armyknife-jetpack:1.4.14")
 
     compileOnly("io.reactivex.rxjava2:rxkotlin:2.4.0")  // Reactive Extension

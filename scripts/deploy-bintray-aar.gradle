@@ -1,7 +1,10 @@
-group = artifact_group
-version = artifact_version
+group = "${artifact.base_group}.${project.name}"
+version = artifact.deploy_version
 
 apply plugin: "org.jetbrains.dokka"
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
+
 dokkaHtml {
     outputDirectory = new File(buildDir, "dokka")
     dokkaSourceSets {
@@ -23,9 +26,12 @@ task javadocJar(type: Jar, dependsOn: dokkaHtml) {
     archiveClassifier.set('javadoc')
 }
 
-
+/**
+ * Maven deploy settings.
+ * https://developer.android.com/studio/build/maven-publish-plugin
+ */
 android.libraryVariants.all { variant ->
-    if ("release" != variant.name || "" == artifact_version) {
+    if ("release" != variant.name) {
         return
     }
 
@@ -33,47 +39,33 @@ android.libraryVariants.all { variant ->
         archives javadocJar
         archives sourcesJar
     }
-}
 
-if (project.hasProperty("install_snapshot")) {
-    println("deploy to mavenLocal()")
-    println ":${project.name}:publishToMavenLocal -> file:${System.getProperty('user.home')}/.m2/repository : ${version}"
-    apply plugin: 'maven-publish'
-    /**
-     * Maven deploy settings.
-     * https://developer.android.com/studio/build/maven-publish-plugin
-     */
     afterEvaluate {
         publishing {
             publications {
                 release(MavenPublication) {
                     from components.release
-                    groupId = artifact_group
+                    groupId = "${artifact.base_group}.${project.name}"
                     artifactId = project.name
-                    // Adds javadocs and sources as separate jars.
                     artifact sourcesJar
                     artifact javadocJar
                 }
             }
         }
     }
-} else {
-    println("deploy to bintray.")
-    println ":${project.name}:bintrayUpload  -> ${artifact_group} : ${version}"
-    apply plugin: 'com.jfrog.bintray'
-    apply plugin: 'com.github.dcendents.android-maven'  // Generate POM for bintray.
+
     bintray {
-        user = 'eaglesakura'
+        user = bintray_configs.user
         key = System.env.BINTRAY_API_KEY
         publish = true
         override = true
         pkg {
-            repo = "maven"
-            name = artifact_name
-            vcsUrl = bintray_vcs_url
-            issueTrackerUrl = "${bintray_vcs_url}/issues"
-            licenses = ["MIT"]
-            labels = bintray_labels
+            repo = bintray_configs.repository_name
+            name = project.name
+            vcsUrl = bintray_configs.vcs_url
+            issueTrackerUrl = bintray_configs.issues_url
+            licenses = bintray_configs.licenses
+            labels = bintray_configs.labels
             version {
                 name = project.version
                 released = new Date()
@@ -82,7 +74,8 @@ if (project.hasProperty("install_snapshot")) {
                     passphrase = System.env.BINTRAY_GPG_PASS
                 }
             }
+            configurations = ['archives']
+            publications = ['release']
         }
-        configurations = ['archives']
     }
 }
