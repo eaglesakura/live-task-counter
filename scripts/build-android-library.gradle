@@ -1,6 +1,13 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
+if (artifact.dynamic_group_id) {
+    group "${artifact.base_group}.${project.name}"
+} else {
+    group artifact.base_group
+}
+version = artifact.deploy_version
+
 android {
     compileSdkVersion versions.android_targetSdk
     buildToolsVersion versions.android_buildTools
@@ -13,7 +20,6 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
-        useIR = true
     }
 
     defaultConfig {
@@ -60,11 +66,8 @@ dependencies {
      * for Tests (or Android Tests)
      */
     testImplementation 'org.robolectric:robolectric:4.4'
-    androidTestImplementation 'androidx.multidex:multidex:2.0.1'
-    androidTestImplementation 'androidx.multidex:multidex-instrumentation:2.0.0'
-
-    testImplementation 'com.eaglesakura.armyknife.armyknife-android-junit4:armyknife-android-junit4:1.3.5'
-    androidTestImplementation 'com.eaglesakura.armyknife.armyknife-android-junit4:armyknife-android-junit4:1.3.5'
+    testImplementation 'io.github.eaglesakura.armyknife-android-junit4:armyknife-android-junit4:1.3.6'
+    androidTestImplementation 'io.github.eaglesakura.armyknife-android-junit4:armyknife-android-junit4:1.3.6'
 }
 
 apply from: rootProject.file('scripts/formatter.gradle')
