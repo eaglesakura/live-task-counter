@@ -1,4 +1,4 @@
-package com.eaglesakura.firearm.experimental.coroutines
+package io.github.eaglesakura.live_task_counter
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -57,12 +57,12 @@ class LiveTaskCounterTest {
                 delay(500)
                 assertEquals(tasks.size, counter.count)
                 assertTrue(counter.isNotEmpty)
-                assertFalse(counter.empty)
+                assertFalse(counter.isEmpty)
 
                 tasks.joinAll()
                 assertEquals(0, counter.count)
                 assertFalse(counter.isNotEmpty)
-                assertTrue(counter.empty)
+                assertTrue(counter.isEmpty)
             }
         }
     }

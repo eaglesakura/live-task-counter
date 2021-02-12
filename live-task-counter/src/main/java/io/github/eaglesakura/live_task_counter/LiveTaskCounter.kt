@@ -1,8 +1,7 @@
-package com.eaglesakura.firearm.experimental.coroutines
+package io.github.eaglesakura.live_task_counter
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
-import com.eaglesakura.armyknife.android.extensions.runBlockingOnUiThread
 import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -39,6 +38,7 @@ import kotlinx.coroutines.withContext
  * }
  *
  */
+@Suppress("unused")
 class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>(Snapshot(Date(), 0, 0)) {
 
     private val versionImpl = AtomicLong()
@@ -48,19 +48,30 @@ class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>(Snapshot(Date(), 0, 0
     /**
      * Current count.
      */
+    @Suppress("MemberVisibilityCanBePrivate")
     val count: Int
         get() = (this.value?.count ?: 0)
 
     /**
      * has countImpl
      */
+    @Suppress("unused")
     val isNotEmpty: Boolean
         get() = this.count > 0
 
     /**
      * not have countImpl.
      */
+    @Suppress("unused")
+    @Deprecated("use .isEmpty", ReplaceWith("isEmpty"))
     val empty: Boolean
+        get() = this.count == 0
+
+    /**
+     * not have countImpl.
+     */
+    @Suppress("unused")
+    val isEmpty: Boolean
         get() = this.count == 0
 
     /**
@@ -69,6 +80,7 @@ class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>(Snapshot(Date(), 0, 0
      * when start this function, then increment this LiveData.
      * when finally this function, then decrement this LiveData.
      */
+    @Suppress("unused")
     suspend fun <T> withCount(action: suspend () -> T): T {
         try {
             withContext(Dispatchers.Main + NonCancellable) {
@@ -98,10 +110,17 @@ class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>(Snapshot(Date(), 0, 0
         val version: Long,
         val count: Int
     ) {
+        @Suppress("unused")
         val isNotEmpty: Boolean
             get() = count > 0
 
+        @Suppress("unused")
+        @Deprecated("use .isEmpty", ReplaceWith("isEmpty"))
         val empty: Boolean
+            get() = count == 0
+
+        @Suppress("unused")
+        val isEmpty: Boolean
             get() = count == 0
     }
 
@@ -109,6 +128,7 @@ class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>(Snapshot(Date(), 0, 0
         /**
          * Check all task counter.
          */
+        @Suppress("unused")
         fun allOf(vararg tasks: LiveTaskCounter): LiveData<Snapshot> {
             require(tasks.isNotEmpty()) {
                 "tasks is empty"
@@ -122,15 +142,10 @@ class LiveTaskCounter : LiveData<LiveTaskCounter.Snapshot>(Snapshot(Date(), 0, 0
                 )
             }
 
-            return runBlockingOnUiThread {
-                tasks.forEach {
-                    result.addSource(it, sync)
-                }
-                // activate
-                result.observeForever {}
-
-                result
+            tasks.forEach {
+                result.addSource(it, sync)
             }
+            return result
         }
     }
 }

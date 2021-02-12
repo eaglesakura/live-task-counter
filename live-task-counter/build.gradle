@@ -1,0 +1,8 @@
+apply from: rootProject.file('scripts/build-android-library.gradle')
+apply from: rootProject.file('scripts/deploy-mavencentral-aar.gradle')
+
+dependencies {
+    api "androidx.lifecycle:lifecycle-runtime-ktx:2.2.0"
+    api "androidx.lifecycle:lifecycle-livedata-core-ktx:2.2.0"
+    api "androidx.lifecycle:lifecycle-livedata-ktx:2.2.0"
+}

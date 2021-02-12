@@ -1,6 +1,6 @@
 // Project settings.
 ext {
-    artifact.base_version = "1.3"
+    artifact.base_version = "1.0"
     artifact.base_group = "io.github.eaglesakura"
 
     mavencentral.pom_description = "Android/Kotlin experimental library"
