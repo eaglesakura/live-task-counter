@@ -39,6 +39,6 @@ suspend fun bar() {
 // /app/build.gradle
 dependencies {
     // check versions
-    implementation 'com.eaglesakura.live-task-counter:live-task-counter:${replace version}'
+    implementation 'io.github.eaglesakura.live-task-counter:live-task-counter:+'
 }
 ```
